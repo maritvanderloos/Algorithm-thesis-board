@@ -468,9 +468,10 @@ function removeCard(slotIndex) {
 // CENTRAL VIEW
 // ═══════════════════════════════════════════════════════════════════════════
 
-const TOKEN_W = 320, TOKEN_H = 120, MARGIN = 28;
+const TOKEN_W    = 320, TOKEN_H = 120, MARGIN = 28;
+const NUDGE_STEP = 38; // px offset per extra token sharing the same slot column
 
-const tokenPositions = new Map(); // key → { x, y }
+const slotNudgeIndex = new Map(); // slotIndex → count of tokens already placed there
 const tokenEls       = new Map(); // key → DOM element
 
 function tKey(boardId, slotIndex) { return `${boardId}|${slotIndex}`; }
@@ -491,13 +492,12 @@ function addToken(boardId, slotIndex, cardName) {
   const card = CARDS.find(c => c.name === cardName);
   if (!card) return;
 
-  const pos = findFreePosition();
-  tokenPositions.set(key, pos);
+  const { x, y } = positionForToken(slotIndex);
 
   const el = document.createElement('div');
   el.className = 'token';
-  el.style.left = pos.x + 'px';
-  el.style.top  = pos.y + 'px';
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
 
   const img = document.createElement('img');
   img.src = card.image;
@@ -507,7 +507,7 @@ function addToken(boardId, slotIndex, cardName) {
   centralCanvas.appendChild(el);
   tokenEls.set(key, el);
 
-  // Double rAF ensures the initial opacity:0 state is painted before transition
+  // Double rAF ensures the opacity:0 base state is painted before the transition fires
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('visible')));
 }
 
@@ -520,47 +520,36 @@ function removeToken(boardId, slotIndex) {
   el.addEventListener('transitionend', () => {
     el.remove();
     tokenEls.delete(key);
-    tokenPositions.delete(key);
   }, { once: true });
 }
 
 function removeBoard(boardId) {
   for (const key of [...tokenEls.keys()]) {
     if (key.startsWith(boardId + '|')) {
-      const slotIndex = +key.split('|')[1];
-      removeToken(boardId, slotIndex);
+      removeToken(boardId, +key.split('|')[1]);
     }
   }
 }
 
-// Random non-colliding placement. Falls back to a random spot if no free
-// position is found within 300 attempts (very unlikely with 2-5 boards).
-function findFreePosition() {
-  const cw = window.innerWidth;
-  const ch = window.innerHeight;
+// X mirrors the board's scaled+centred position on screen so tokens land in
+// the same column as their physical slot. Each additional token at the same
+// slot is nudged right by NUDGE_STEP. Y is fully random.
+function positionForToken(slotIndex) {
+  const nudgeIdx = slotNudgeIndex.get(slotIndex) ?? 0;
+  slotNudgeIndex.set(slotIndex, nudgeIdx + 1);
 
-  for (let i = 0; i < 300; i++) {
-    const x = MARGIN + Math.random() * (cw - TOKEN_W - MARGIN * 2);
-    const y = MARGIN + Math.random() * (ch - TOKEN_H - MARGIN * 2);
+  const scale     = Math.min(window.innerWidth / 650, window.innerHeight / 500) * 0.95;
+  const boardLeft = (window.innerWidth - 650 * scale) / 2;
+  const [slotX]   = SLOT_POSITIONS[slotIndex];
+  const centerX   = boardLeft + (slotX + 40) * scale; // screen x of slot centre
 
-    let free = true;
-    for (const pos of tokenPositions.values()) {
-      if (x < pos.x + TOKEN_W + MARGIN &&
-          x + TOKEN_W + MARGIN > pos.x &&
-          y < pos.y + TOKEN_H + MARGIN &&
-          y + TOKEN_H + MARGIN > pos.y) {
-        free = false;
-        break;
-      }
-    }
+  const x = Math.min(
+    Math.max(centerX - TOKEN_W / 2 + nudgeIdx * NUDGE_STEP, MARGIN),
+    window.innerWidth - TOKEN_W - MARGIN
+  );
+  const y = MARGIN + Math.random() * (window.innerHeight - TOKEN_H - MARGIN * 2);
 
-    if (free) return { x, y };
-  }
-
-  return {
-    x: MARGIN + Math.random() * (cw - TOKEN_W - MARGIN * 2),
-    y: MARGIN + Math.random() * (ch - TOKEN_H - MARGIN * 2),
-  };
+  return { x, y };
 }
 </script>
 </body>

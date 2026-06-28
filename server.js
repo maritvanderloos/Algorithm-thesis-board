@@ -9,7 +9,8 @@ const BOARD_FILE = path.join(__dirname, 'board.html');
 
 // ── HTTP: serves board.html and card images ───────────────────────────────
 const httpServer = http.createServer((req, res) => {
-  if (req.url === '/' || req.url.startsWith('/board.html')) {
+  const pathname = req.url.split('?')[0];
+  if (pathname === '/' || pathname === '/board.html') {
     fs.readFile(BOARD_FILE, (err, data) => {
       if (err) { res.writeHead(404); res.end('Not found'); return; }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
