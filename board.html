@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Value Board</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #f0ece3;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#board {
+  width: 650px;
+  height: 500px;
+  position: relative;
+  transform-origin: center center;
+  background: #eae6dc;
+  border-radius: 22px;
+  box-shadow:
+    0 4px 32px rgba(0,0,0,0.10),
+    0 1px 4px rgba(0,0,0,0.06);
+}
+
+/* ── Slots ────────────────────────────────────────────────────────────── */
+
+.slot {
+  position: absolute;
+  width: 80px;
+  height: 30px;
+  border-radius: 9px;
+  background: rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.09);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;   /* card images extend well beyond the slot marker */
+  transition: border-color 0.18s, box-shadow 0.18s;
+  z-index: 1;
+}
+
+.slot::after {
+  content: '+';
+  font-size: 11px;
+  color: rgba(0,0,0,0.18);
+  pointer-events: none;
+  transition: color 0.18s;
+}
+
+.slot:hover {
+  border-color: rgba(0,0,0,0.2);
+  z-index: 10;
+}
+
+.slot:hover::after {
+  color: rgba(0,0,0,0.35);
+}
+
+.slot.active-target {
+  border-color: rgba(100,80,200,0.35);
+  box-shadow: 0 0 14px rgba(100,80,200,0.12);
+}
+
+.slot.active-target::after { display: none; }
+
+.slot.occupied {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.slot.occupied::after { display: none; }
+
+.slot.occupied:hover {
+  border-color: rgba(0,0,0,0.08);
+  z-index: 10;
+}
+
+/* ── Card image inside a filled slot ────────────────────────────────── */
+
+.slot-img {
+  /* 4× the slot dimensions, absolutely centred so the card illustration
+     extends well beyond the small slot marker in all directions. */
+  position: absolute;
+  width: 320px;    /* 4 × 80px slot width  */
+  height: 120px;   /* 4 × 30px slot height */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  pointer-events: none;
+  transition: transform 0.18s, opacity 0.18s;
+}
+
+.slot.occupied:hover .slot-img {
+  transform: translate(-50%, -50%) scale(0.9);
+  opacity: 0.75;
+}
+
+/* ── Picker panel ───────────────────────────────────────────────────── */
+
+#picker {
+  position: absolute;
+  background: rgba(255, 253, 249, 0.97);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 16px;
+  padding: 12px;
+  display: none;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 284px;   /* 3 columns × 80px + 2 gaps × 10px + 2 × 12px padding */
+  z-index: 200;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.14),
+    0 2px 8px rgba(0,0,0,0.08);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+/* Each picker item: image thumbnail + label stacked vertically */
+.picker-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  width: 80px;
+  transition: transform 0.12s;
+  user-select: none;
+}
+
+.picker-item:hover {
+  transform: scale(1.08);
+}
+
+.picker-item.used {
+  opacity: 0.2;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.picker-item img {
+  width: 80px;
+  height: 30px;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  /* same scale trick as slot, so image fills the thumbnail area */
+  transform: scale(1.2);
+  transform-origin: center center;
+}
+
+.picker-item span {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(0,0,0,0.38);
+  text-align: center;
+  line-height: 1;
+}
+</style>
+</head>
+<body>
+<div id="board">
+  <div id="picker"></div>
+</div>
+
+<script>
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * IMAGE PATHS
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Images are loaded via absolute file:// URLs pointing to the local OneDrive
+ * folder. If you move the HTML file or the image folder, update IMG_BASE below.
+ * When serving over a web server, replace IMG_BASE with a relative or
+ * absolute URL (e.g. '/cards/' or 'https://example.com/cards/').
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * WEBSOCKET / NFC EVENT INTEGRATION
+ * ═══════════════════════════════════════════════════════════════════════════
+ * To receive real-time NFC card events from a backend, add a WebSocket
+ * listener here. Expected JSON message format:
+ *
+ *   { "action": "place",  "slotIndex": 2, "cardName": "Privacy" }
+ *   { "action": "remove", "slotIndex": 2 }
+ *
+ *   const ws = new WebSocket('ws://YOUR_HOST:PORT');
+ *   ws.onmessage = ({ data }) => {
+ *     const msg = JSON.parse(data);
+ *     if (msg.action === 'place') {
+ *       const card = CARDS.find(c => c.name === msg.cardName);
+ *       if (card) placeCard(msg.slotIndex, card);
+ *     } else if (msg.action === 'remove') {
+ *       removeCard(msg.slotIndex);
+ *     }
+ *   };
+ *
+ * placeCard() and removeCard() are the only two functions you need to call.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+const IMG_BASE = 'file:///C:/Users/vdlma/OneDrive%20-%20University%20of%20Twente/Illustraties/values%20cut%20out/';
+
+const CARDS = [
+  { name: 'Privacy',     image: IMG_BASE + 'privacy.png'     },
+  { name: 'Equality',    image: IMG_BASE + 'equality.png'    },
+  { name: 'Freedom',     image: IMG_BASE + 'freedom.png'     },
+  { name: 'Safety',      image: IMG_BASE + 'safety.png'      },
+  { name: 'Common Good', image: IMG_BASE + 'commongood.png'  },
+  { name: 'Humane',      image: IMG_BASE + 'humane.png'      },
+  { name: 'Transparency',image: IMG_BASE + 'transparency.png'},
+];
+
+// [x, y] top-left corner of each slot in the 650×500 coordinate space
+const SLOT_POSITIONS = [
+  [ 65,  95], [285,  95], [505,  95],  // Row 1
+  [175, 195], [395, 195],              // Row 2
+  [175, 295], [395, 295],              // Row 3
+  [ 65, 395], [285, 395], [505, 395], // Row 4
+];
+
+const slotAssignments = new Array(SLOT_POSITIONS.length).fill(null);
+
+const board  = document.getElementById('board');
+const picker = document.getElementById('picker');
+let activeSlot = null;
+
+// ── Scale board to fill viewport ──────────────────────────────────────────
+function fitBoard() {
+  const s = Math.min(window.innerWidth / 650, window.innerHeight / 500) * 0.95;
+  board.style.transform = `scale(${s})`;
+}
+window.addEventListener('resize', fitBoard);
+fitBoard();
+
+// ── Build slot elements ───────────────────────────────────────────────────
+const slotEls = SLOT_POSITIONS.map(([x, y], i) => {
+  const el = document.createElement('div');
+  el.className = 'slot';
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  el.dataset.index = i;
+  el.addEventListener('click', onSlotClick);
+  board.appendChild(el);
+  return el;
+});
+
+function renderSlot(i) {
+  const el   = slotEls[i];
+  const card = slotAssignments[i];
+  el.innerHTML = '';
+
+  if (card) {
+    el.classList.add('occupied');
+    const img = document.createElement('img');
+    img.className = 'slot-img';
+    img.src = card.image;
+    img.alt = card.name;
+    el.appendChild(img);
+  } else {
+    el.classList.remove('occupied');
+  }
+}
+
+// ── Slot click handler ────────────────────────────────────────────────────
+function onSlotClick(e) {
+  e.stopPropagation();
+  const i = +this.dataset.index;
+
+  if (slotAssignments[i]) {
+    removeCard(i);
+    hidePicker();
+    return;
+  }
+
+  if (activeSlot === i) {
+    hidePicker();
+    return;
+  }
+
+  showPicker(i);
+}
+
+// ── Picker ────────────────────────────────────────────────────────────────
+const PICKER_W = 284;
+const PICKER_H = 170; // 2 rows × (30+4+10+10) + padding — keep picker in-bounds
+
+function showPicker(slotIndex) {
+  if (activeSlot !== null) slotEls[activeSlot].classList.remove('active-target');
+  activeSlot = slotIndex;
+  slotEls[slotIndex].classList.add('active-target');
+
+  const [x, y] = SLOT_POSITIONS[slotIndex];
+  const px = Math.min(Math.max(x - (PICKER_W - 80) / 2, 8), 650 - PICKER_W - 8);
+  const py = (y + 36 + PICKER_H > 500) ? y - PICKER_H - 6 : y + 36;
+
+  picker.style.left    = px + 'px';
+  picker.style.top     = py + 'px';
+  picker.style.display = 'flex';
+  picker.innerHTML     = '';
+
+  CARDS.forEach(card => {
+    const item = document.createElement('div');
+    item.className = 'picker-item';
+
+    const img = document.createElement('img');
+    img.src = card.image;
+    img.alt = card.name;
+
+    const label = document.createElement('span');
+    label.textContent = card.name;
+
+    item.appendChild(img);
+    item.appendChild(label);
+
+    if (slotAssignments.some(c => c && c.name === card.name)) {
+      item.classList.add('used');
+    }
+
+    item.addEventListener('click', e => {
+      e.stopPropagation();
+      placeCard(activeSlot, card);
+      hidePicker();
+    });
+
+    picker.appendChild(item);
+  });
+}
+
+function hidePicker() {
+  if (activeSlot !== null) {
+    slotEls[activeSlot].classList.remove('active-target');
+    activeSlot = null;
+  }
+  picker.style.display = 'none';
+}
+
+// ── Card state — also the WebSocket integration entry points ─────────────
+function placeCard(slotIndex, card) {
+  slotAssignments[slotIndex] = card;
+  renderSlot(slotIndex);
+}
+
+function removeCard(slotIndex) {
+  slotAssignments[slotIndex] = null;
+  renderSlot(slotIndex);
+}
+
+document.addEventListener('click', hidePicker);
+</script>
+</body>
+</html>
