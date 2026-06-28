@@ -270,6 +270,10 @@ const pickerEl      = document.getElementById('picker');
 const centralCanvas = document.getElementById('central-canvas');
 const statusBadge   = document.getElementById('status-badge');
 
+// ── WS state (declared before connectWS() is called) ─────────────────────
+let ws             = null;
+let reconnectTimer = null;
+
 // ── Board mode state (declared here so initBoard() can reference them) ────
 const SLOT_POSITIONS = [
   [ 65,  95], [285,  95], [505,  95],  // Row 1
@@ -295,9 +299,6 @@ connectWS();
 // ═══════════════════════════════════════════════════════════════════════════
 // WEBSOCKET  (shared by both modes)
 // ═══════════════════════════════════════════════════════════════════════════
-
-let ws             = null;
-let reconnectTimer = null;
 
 function connectWS() {
   clearTimeout(reconnectTimer);
