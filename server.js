@@ -4,7 +4,7 @@ const path      = require('path');
 const WebSocket = require('ws');
 
 const PORT      = process.env.PORT || 8080;
-const CARDS_DIR = 'C:\\Users\\vdlma\\OneDrive - University of Twente\\Illustraties\\values cut out';
+const CARDS_DIR = path.join(__dirname, 'cards');
 const BOARD_FILE = path.join(__dirname, 'board.html');
 
 // ── HTTP: serves board.html and card images ───────────────────────────────
