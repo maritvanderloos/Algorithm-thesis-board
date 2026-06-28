@@ -12,6 +12,13 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+}
+
+/* ── Board mode ─────────────────────────────────────────────────────────── */
+
+#board-wrap {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -29,7 +36,7 @@ body {
     0 1px 4px rgba(0,0,0,0.06);
 }
 
-/* ── Slots ────────────────────────────────────────────────────────────── */
+/* ── Slots ──────────────────────────────────────────────────────────────── */
 
 .slot {
   position: absolute;
@@ -42,7 +49,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: visible;   /* card images extend well beyond the slot marker */
+  overflow: visible;
   transition: border-color 0.18s, box-shadow 0.18s;
   z-index: 1;
 }
@@ -55,48 +62,29 @@ body {
   transition: color 0.18s;
 }
 
-.slot:hover {
-  border-color: rgba(0,0,0,0.2);
-  z-index: 10;
-}
-
-.slot:hover::after {
-  color: rgba(0,0,0,0.35);
-}
+.slot:hover                { border-color: rgba(0,0,0,0.2); z-index: 10; }
+.slot:hover::after         { color: rgba(0,0,0,0.35); }
 
 .slot.active-target {
   border-color: rgba(100,80,200,0.35);
   box-shadow: 0 0 14px rgba(100,80,200,0.12);
 }
-
 .slot.active-target::after { display: none; }
 
-.slot.occupied {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-}
+.slot.occupied             { background: transparent; border-color: transparent; box-shadow: none; }
+.slot.occupied::after      { display: none; }
+.slot.occupied:hover       { border-color: rgba(0,0,0,0.08); z-index: 10; }
 
-.slot.occupied::after { display: none; }
-
-.slot.occupied:hover {
-  border-color: rgba(0,0,0,0.08);
-  z-index: 10;
-}
-
-/* ── Card image inside a filled slot ────────────────────────────────── */
+/* ── Card image inside slot ─────────────────────────────────────────────── */
 
 .slot-img {
-  /* 4× the slot dimensions, absolutely centred so the card illustration
-     extends well beyond the small slot marker in all directions. */
   position: absolute;
-  width: 320px;    /* 4 × 80px slot width  */
-  height: 120px;   /* 4 × 30px slot height */
+  width: 320px;
+  height: 120px;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   object-fit: contain;
-  object-position: center;
   display: block;
   pointer-events: none;
   transition: transform 0.18s, opacity 0.18s;
@@ -107,7 +95,7 @@ body {
   opacity: 0.75;
 }
 
-/* ── Picker panel ───────────────────────────────────────────────────── */
+/* ── Picker panel ───────────────────────────────────────────────────────── */
 
 #picker {
   position: absolute;
@@ -118,16 +106,13 @@ body {
   display: none;
   flex-wrap: wrap;
   gap: 10px;
-  width: 284px;   /* 3 columns × 80px + 2 gaps × 10px + 2 × 12px padding */
+  width: 284px;
   z-index: 200;
-  box-shadow:
-    0 8px 32px rgba(0,0,0,0.14),
-    0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08);
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
 }
 
-/* Each picker item: image thumbnail + label stacked vertically */
 .picker-item {
   display: flex;
   flex-direction: column;
@@ -138,24 +123,14 @@ body {
   transition: transform 0.12s;
   user-select: none;
 }
-
-.picker-item:hover {
-  transform: scale(1.08);
-}
-
-.picker-item.used {
-  opacity: 0.2;
-  cursor: not-allowed;
-  pointer-events: none;
-}
+.picker-item:hover         { transform: scale(1.08); }
+.picker-item.used          { opacity: 0.2; cursor: not-allowed; pointer-events: none; }
 
 .picker-item img {
   width: 80px;
   height: 30px;
   object-fit: contain;
-  object-position: center;
   display: block;
-  /* same scale trick as slot, so image fills the thumbnail area */
   transform: scale(1.2);
   transform-origin: center center;
 }
@@ -170,60 +145,206 @@ body {
   text-align: center;
   line-height: 1;
 }
+
+/* ── Central view canvas ────────────────────────────────────────────────── */
+
+#central-canvas {
+  display: none;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.token {
+  position: absolute;
+  width: 320px;
+  height: 120px;
+  opacity: 0;
+  transform: scale(0.78);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  pointer-events: none;
+}
+
+.token.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.token img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* ── Status badge ───────────────────────────────────────────────────────── */
+
+#status-badge {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(0,0,0,0.28);
+  background: rgba(255,255,255,0.6);
+  padding: 5px 10px;
+  border-radius: 20px;
+  z-index: 1000;
+  pointer-events: none;
+  transition: color 0.3s;
+}
+#status-badge.disconnected { color: rgba(200,60,60,0.55); }
 </style>
 </head>
 <body>
-<div id="board">
-  <div id="picker"></div>
+
+<div id="board-wrap">
+  <div id="board">
+    <div id="picker"></div>
+  </div>
 </div>
+
+<div id="central-canvas"></div>
+<div id="status-badge">connecting…</div>
 
 <script>
 /*
  * ═══════════════════════════════════════════════════════════════════════════
+ * URL PARAMETERS
+ * ═══════════════════════════════════════════════════════════════════════════
+ *   ?mode=central   open as the central aggregation view
+ *   ?host=x.x.x.x  WebSocket server host  (default: localhost)
+ *   ?port=8080      WebSocket server port  (default: 8080)
+ *
+ *   Board view:    board.html
+ *   Central view:  board.html?mode=central
+ *   Remote board:  board.html?host=192.168.1.5
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
  * IMAGE PATHS
  * ═══════════════════════════════════════════════════════════════════════════
- * Images are loaded via absolute file:// URLs pointing to the local OneDrive
- * folder. If you move the HTML file or the image folder, update IMG_BASE below.
- * When serving over a web server, replace IMG_BASE with a relative or
- * absolute URL (e.g. '/cards/' or 'https://example.com/cards/').
+ *   Images are loaded via absolute file:// URLs. Update IMG_BASE if the
+ *   folder moves, or replace with a relative/HTTP URL when serving from
+ *   a web server.
+ *
  * ═══════════════════════════════════════════════════════════════════════════
- *
- * WEBSOCKET / NFC EVENT INTEGRATION
+ * NFC INTEGRATION
  * ═══════════════════════════════════════════════════════════════════════════
- * To receive real-time NFC card events from a backend, add a WebSocket
- * listener here. Expected JSON message format:
+ *   A physical NFC reader bridge should connect to the same WS server and
+ *   send board-mode messages on behalf of the board it is attached to:
  *
- *   { "action": "place",  "slotIndex": 2, "cardName": "Privacy" }
- *   { "action": "remove", "slotIndex": 2 }
+ *     { type: 'place',  slotIndex: 2, cardName: 'Privacy' }
+ *     { type: 'remove', slotIndex: 2 }
  *
- *   const ws = new WebSocket('ws://YOUR_HOST:PORT');
- *   ws.onmessage = ({ data }) => {
- *     const msg = JSON.parse(data);
- *     if (msg.action === 'place') {
- *       const card = CARDS.find(c => c.name === msg.cardName);
- *       if (card) placeCard(msg.slotIndex, card);
- *     } else if (msg.action === 'remove') {
- *       removeCard(msg.slotIndex);
- *     }
- *   };
- *
- * placeCard() and removeCard() are the only two functions you need to call.
+ *   The server relays these to all clients unchanged.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
+// ── Config ────────────────────────────────────────────────────────────────
+const PARAMS  = new URLSearchParams(location.search);
+const MODE    = PARAMS.get('mode') === 'central' ? 'central' : 'board';
+const WS_HOST = PARAMS.get('host') || 'localhost';
+const WS_PORT = PARAMS.get('port') || '8080';
+const WS_URL  = `ws://${WS_HOST}:${WS_PORT}`;
+
+// ── Shared card definitions ───────────────────────────────────────────────
 const IMG_BASE = 'file:///C:/Users/vdlma/OneDrive%20-%20University%20of%20Twente/Illustraties/values%20cut%20out/';
 
 const CARDS = [
-  { name: 'Privacy',     image: IMG_BASE + 'privacy.png'     },
-  { name: 'Equality',    image: IMG_BASE + 'equality.png'    },
-  { name: 'Freedom',     image: IMG_BASE + 'freedom.png'     },
-  { name: 'Safety',      image: IMG_BASE + 'safety.png'      },
-  { name: 'Common Good', image: IMG_BASE + 'commongood.png'  },
-  { name: 'Humane',      image: IMG_BASE + 'humane.png'      },
-  { name: 'Transparency',image: IMG_BASE + 'transparency.png'},
+  { name: 'Privacy',      image: IMG_BASE + 'privacy.png'      },
+  { name: 'Equality',     image: IMG_BASE + 'equality.png'     },
+  { name: 'Freedom',      image: IMG_BASE + 'freedom.png'      },
+  { name: 'Safety',       image: IMG_BASE + 'safety.png'       },
+  { name: 'Common Good',  image: IMG_BASE + 'commongood.png'   },
+  { name: 'Humane',       image: IMG_BASE + 'humane.png'       },
+  { name: 'Transparency', image: IMG_BASE + 'transparency.png' },
 ];
 
-// [x, y] top-left corner of each slot in the 650×500 coordinate space
+// ── DOM refs ──────────────────────────────────────────────────────────────
+const boardWrap     = document.getElementById('board-wrap');
+const boardEl       = document.getElementById('board');
+const pickerEl      = document.getElementById('picker');
+const centralCanvas = document.getElementById('central-canvas');
+const statusBadge   = document.getElementById('status-badge');
+
+// ── Mode bootstrap ────────────────────────────────────────────────────────
+if (MODE === 'central') {
+  boardWrap.style.display = 'none';
+  centralCanvas.style.display = 'block';
+  document.title = 'Central View';
+} else {
+  initBoard();
+}
+
+connectWS();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WEBSOCKET  (shared by both modes)
+// ═══════════════════════════════════════════════════════════════════════════
+
+let ws             = null;
+let reconnectTimer = null;
+
+function connectWS() {
+  clearTimeout(reconnectTimer);
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'join', mode: MODE }));
+  };
+
+  ws.onmessage = ({ data }) => {
+    let msg;
+    try { msg = JSON.parse(data); } catch { return; }
+    handleMessage(msg);
+  };
+
+  ws.onclose = () => {
+    setStatus('disconnected');
+    reconnectTimer = setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+function sendWS(msg) {
+  if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+function handleMessage(msg) {
+  if (MODE === 'board') {
+    if (msg.type === 'assigned') {
+      setStatus(msg.boardId);
+      // Re-broadcast full local state so the central view stays in sync
+      // after a reconnect (board gets a fresh ID but still has local state).
+      slotAssignments.forEach((card, i) => {
+        if (card) sendWS({ type: 'place', slotIndex: i, cardName: card.name });
+      });
+    }
+    return;
+  }
+
+  // Central view
+  switch (msg.type) {
+    case 'full_state':       handleFullState(msg.boards);                         break;
+    case 'place':            addToken(msg.boardId, msg.slotIndex, msg.cardName);  break;
+    case 'remove':           removeToken(msg.boardId, msg.slotIndex);             break;
+    case 'board_disconnect': removeBoard(msg.boardId);                            break;
+  }
+}
+
+function setStatus(text) {
+  statusBadge.textContent = text;
+  statusBadge.classList.toggle('disconnected', text === 'disconnected');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BOARD MODE
+// ═══════════════════════════════════════════════════════════════════════════
+
 const SLOT_POSITIONS = [
   [ 65,  95], [285,  95], [505,  95],  // Row 1
   [175, 195], [395, 195],              // Row 2
@@ -232,30 +353,30 @@ const SLOT_POSITIONS = [
 ];
 
 const slotAssignments = new Array(SLOT_POSITIONS.length).fill(null);
-
-const board  = document.getElementById('board');
-const picker = document.getElementById('picker');
 let activeSlot = null;
+let slotEls    = [];
 
-// ── Scale board to fill viewport ──────────────────────────────────────────
+function initBoard() {
+  fitBoard();
+  window.addEventListener('resize', fitBoard);
+  document.addEventListener('click', hidePicker);
+
+  slotEls = SLOT_POSITIONS.map(([x, y], i) => {
+    const el = document.createElement('div');
+    el.className = 'slot';
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+    el.dataset.index = i;
+    el.addEventListener('click', onSlotClick);
+    boardEl.appendChild(el);
+    return el;
+  });
+}
+
 function fitBoard() {
   const s = Math.min(window.innerWidth / 650, window.innerHeight / 500) * 0.95;
-  board.style.transform = `scale(${s})`;
+  boardEl.style.transform = `scale(${s})`;
 }
-window.addEventListener('resize', fitBoard);
-fitBoard();
-
-// ── Build slot elements ───────────────────────────────────────────────────
-const slotEls = SLOT_POSITIONS.map(([x, y], i) => {
-  const el = document.createElement('div');
-  el.className = 'slot';
-  el.style.left = x + 'px';
-  el.style.top  = y + 'px';
-  el.dataset.index = i;
-  el.addEventListener('click', onSlotClick);
-  board.appendChild(el);
-  return el;
-});
 
 function renderSlot(i) {
   const el   = slotEls[i];
@@ -274,28 +395,16 @@ function renderSlot(i) {
   }
 }
 
-// ── Slot click handler ────────────────────────────────────────────────────
 function onSlotClick(e) {
   e.stopPropagation();
   const i = +this.dataset.index;
 
-  if (slotAssignments[i]) {
-    removeCard(i);
-    hidePicker();
-    return;
-  }
-
-  if (activeSlot === i) {
-    hidePicker();
-    return;
-  }
-
+  if (slotAssignments[i]) { removeCard(i); hidePicker(); return; }
+  if (activeSlot === i)   { hidePicker();  return; }
   showPicker(i);
 }
 
-// ── Picker ────────────────────────────────────────────────────────────────
-const PICKER_W = 284;
-const PICKER_H = 170; // 2 rows × (30+4+10+10) + padding — keep picker in-bounds
+const PICKER_W = 284, PICKER_H = 170;
 
 function showPicker(slotIndex) {
   if (activeSlot !== null) slotEls[activeSlot].classList.remove('active-target');
@@ -306,10 +415,10 @@ function showPicker(slotIndex) {
   const px = Math.min(Math.max(x - (PICKER_W - 80) / 2, 8), 650 - PICKER_W - 8);
   const py = (y + 36 + PICKER_H > 500) ? y - PICKER_H - 6 : y + 36;
 
-  picker.style.left    = px + 'px';
-  picker.style.top     = py + 'px';
-  picker.style.display = 'flex';
-  picker.innerHTML     = '';
+  pickerEl.style.left    = px + 'px';
+  pickerEl.style.top     = py + 'px';
+  pickerEl.style.display = 'flex';
+  pickerEl.innerHTML     = '';
 
   CARDS.forEach(card => {
     const item = document.createElement('div');
@@ -325,9 +434,7 @@ function showPicker(slotIndex) {
     item.appendChild(img);
     item.appendChild(label);
 
-    if (slotAssignments.some(c => c && c.name === card.name)) {
-      item.classList.add('used');
-    }
+    if (slotAssignments.some(c => c && c.name === card.name)) item.classList.add('used');
 
     item.addEventListener('click', e => {
       e.stopPropagation();
@@ -335,30 +442,125 @@ function showPicker(slotIndex) {
       hidePicker();
     });
 
-    picker.appendChild(item);
+    pickerEl.appendChild(item);
   });
 }
 
 function hidePicker() {
-  if (activeSlot !== null) {
-    slotEls[activeSlot].classList.remove('active-target');
-    activeSlot = null;
-  }
-  picker.style.display = 'none';
+  if (activeSlot !== null) { slotEls[activeSlot].classList.remove('active-target'); activeSlot = null; }
+  pickerEl.style.display = 'none';
 }
 
-// ── Card state — also the WebSocket integration entry points ─────────────
 function placeCard(slotIndex, card) {
   slotAssignments[slotIndex] = card;
   renderSlot(slotIndex);
+  sendWS({ type: 'place', slotIndex, cardName: card.name });
 }
 
 function removeCard(slotIndex) {
   slotAssignments[slotIndex] = null;
   renderSlot(slotIndex);
+  sendWS({ type: 'remove', slotIndex });
 }
 
-document.addEventListener('click', hidePicker);
+// ═══════════════════════════════════════════════════════════════════════════
+// CENTRAL VIEW
+// ═══════════════════════════════════════════════════════════════════════════
+
+const TOKEN_W = 320, TOKEN_H = 120, MARGIN = 28;
+
+const tokenPositions = new Map(); // key → { x, y }
+const tokenEls       = new Map(); // key → DOM element
+
+function tKey(boardId, slotIndex) { return `${boardId}|${slotIndex}`; }
+
+function handleFullState(boards) {
+  for (const [boardId, slots] of Object.entries(boards)) {
+    for (const [slotIndex, cardName] of Object.entries(slots)) {
+      addToken(boardId, +slotIndex, cardName);
+    }
+  }
+  setStatus('central view');
+}
+
+function addToken(boardId, slotIndex, cardName) {
+  const key = tKey(boardId, slotIndex);
+  if (tokenEls.has(key)) return;
+
+  const card = CARDS.find(c => c.name === cardName);
+  if (!card) return;
+
+  const pos = findFreePosition();
+  tokenPositions.set(key, pos);
+
+  const el = document.createElement('div');
+  el.className = 'token';
+  el.style.left = pos.x + 'px';
+  el.style.top  = pos.y + 'px';
+
+  const img = document.createElement('img');
+  img.src = card.image;
+  img.alt = cardName;
+  el.appendChild(img);
+
+  centralCanvas.appendChild(el);
+  tokenEls.set(key, el);
+
+  // Double rAF ensures the initial opacity:0 state is painted before transition
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('visible')));
+}
+
+function removeToken(boardId, slotIndex) {
+  const key = tKey(boardId, slotIndex);
+  const el  = tokenEls.get(key);
+  if (!el) return;
+
+  el.classList.remove('visible');
+  el.addEventListener('transitionend', () => {
+    el.remove();
+    tokenEls.delete(key);
+    tokenPositions.delete(key);
+  }, { once: true });
+}
+
+function removeBoard(boardId) {
+  for (const key of [...tokenEls.keys()]) {
+    if (key.startsWith(boardId + '|')) {
+      const slotIndex = +key.split('|')[1];
+      removeToken(boardId, slotIndex);
+    }
+  }
+}
+
+// Random non-colliding placement. Falls back to a random spot if no free
+// position is found within 300 attempts (very unlikely with 2-5 boards).
+function findFreePosition() {
+  const cw = window.innerWidth;
+  const ch = window.innerHeight;
+
+  for (let i = 0; i < 300; i++) {
+    const x = MARGIN + Math.random() * (cw - TOKEN_W - MARGIN * 2);
+    const y = MARGIN + Math.random() * (ch - TOKEN_H - MARGIN * 2);
+
+    let free = true;
+    for (const pos of tokenPositions.values()) {
+      if (x < pos.x + TOKEN_W + MARGIN &&
+          x + TOKEN_W + MARGIN > pos.x &&
+          y < pos.y + TOKEN_H + MARGIN &&
+          y + TOKEN_H + MARGIN > pos.y) {
+        free = false;
+        break;
+      }
+    }
+
+    if (free) return { x, y };
+  }
+
+  return {
+    x: MARGIN + Math.random() * (cw - TOKEN_W - MARGIN * 2),
+    y: MARGIN + Math.random() * (ch - TOKEN_H - MARGIN * 2),
+  };
+}
 </script>
 </body>
 </html>
