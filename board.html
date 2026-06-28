@@ -246,12 +246,12 @@ body {
 // ── Config ────────────────────────────────────────────────────────────────
 const PARAMS  = new URLSearchParams(location.search);
 const MODE    = PARAMS.get('mode') === 'central' ? 'central' : 'board';
-const WS_HOST = PARAMS.get('host') || 'localhost';
-const WS_PORT = PARAMS.get('port') || '8080';
+const WS_HOST = PARAMS.get('host') || location.hostname || 'localhost';
+const WS_PORT = PARAMS.get('port') || location.port     || '8080';
 const WS_URL  = `ws://${WS_HOST}:${WS_PORT}`;
 
 // ── Shared card definitions ───────────────────────────────────────────────
-const IMG_BASE = 'file:///C:/Users/vdlma/OneDrive%20-%20University%20of%20Twente/Illustraties/values%20cut%20out/';
+const IMG_BASE = '/cards/';
 
 const CARDS = [
   { name: 'Privacy',      image: IMG_BASE + 'privacy.png'      },
@@ -269,6 +269,17 @@ const boardEl       = document.getElementById('board');
 const pickerEl      = document.getElementById('picker');
 const centralCanvas = document.getElementById('central-canvas');
 const statusBadge   = document.getElementById('status-badge');
+
+// ── Board mode state (declared here so initBoard() can reference them) ────
+const SLOT_POSITIONS = [
+  [ 65,  95], [285,  95], [505,  95],  // Row 1
+  [175, 195], [395, 195],              // Row 2
+  [175, 295], [395, 295],              // Row 3
+  [ 65, 395], [285, 395], [505, 395], // Row 4
+];
+const slotAssignments = new Array(SLOT_POSITIONS.length).fill(null);
+let activeSlot = null;
+let slotEls    = [];
 
 // ── Mode bootstrap ────────────────────────────────────────────────────────
 if (MODE === 'central') {
@@ -344,17 +355,6 @@ function setStatus(text) {
 // ═══════════════════════════════════════════════════════════════════════════
 // BOARD MODE
 // ═══════════════════════════════════════════════════════════════════════════
-
-const SLOT_POSITIONS = [
-  [ 65,  95], [285,  95], [505,  95],  // Row 1
-  [175, 195], [395, 195],              // Row 2
-  [175, 295], [395, 295],              // Row 3
-  [ 65, 395], [285, 395], [505, 395], // Row 4
-];
-
-const slotAssignments = new Array(SLOT_POSITIONS.length).fill(null);
-let activeSlot = null;
-let slotEls    = [];
 
 function initBoard() {
   fitBoard();

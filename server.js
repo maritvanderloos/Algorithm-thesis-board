@@ -1,7 +1,42 @@
+const http      = require('http');
+const fs        = require('fs');
+const path      = require('path');
 const WebSocket = require('ws');
 
-const PORT = process.env.PORT || 8080;
-const wss  = new WebSocket.Server({ port: PORT });
+const PORT      = process.env.PORT || 8080;
+const CARDS_DIR = 'C:\\Users\\vdlma\\OneDrive - University of Twente\\Illustraties\\values cut out';
+const BOARD_FILE = path.join(__dirname, 'board.html');
+
+// ── HTTP: serves board.html and card images ───────────────────────────────
+const httpServer = http.createServer((req, res) => {
+  if (req.url === '/' || req.url.startsWith('/board.html')) {
+    fs.readFile(BOARD_FILE, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Not found'); return; }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(data);
+    });
+    return;
+  }
+
+  if (req.url.startsWith('/cards/')) {
+    const filename = decodeURIComponent(req.url.slice(7));
+    const filepath = path.join(CARDS_DIR, filename);
+    // Prevent path traversal
+    if (!filepath.startsWith(CARDS_DIR)) { res.writeHead(403); res.end(); return; }
+    fs.readFile(filepath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Not found'); return; }
+      res.writeHead(200, { 'Content-Type': 'image/png' });
+      res.end(data);
+    });
+    return;
+  }
+
+  res.writeHead(404);
+  res.end();
+});
+
+// ── WebSocket: relay server ───────────────────────────────────────────────
+const wss = new WebSocket.Server({ server: httpServer });
 
 let boardCounter = 0;
 const clients     = new Map(); // ws → { boardId, type }
@@ -82,7 +117,9 @@ function log(msg) {
   console.log(`[${now}] ${msg}  (${wss.clients.size} connected)`);
 }
 
-console.log(`Value Board server  →  ws://localhost:${PORT}`);
-console.log(`Board view:    board.html`);
-console.log(`Central view:  board.html?mode=central`);
-console.log(`Remote boards: board.html?host=<this-machine-ip>`);
+httpServer.listen(PORT, () => {
+  console.log(`Value Board server  →  http://localhost:${PORT}`);
+  console.log(`Board view:    http://localhost:${PORT}/`);
+  console.log(`Central view:  http://localhost:${PORT}/?mode=central`);
+  console.log(`Remote boards: http://<this-machine-ip>:${PORT}/`);
+});
